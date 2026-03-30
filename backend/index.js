@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
@@ -6,11 +7,11 @@ const app = express();
 app.use(cors());
 
 const pool = new Pool({
-  host: 'clients-api-prod-read-replica.c8z9wqzjlfg3.ap-southeast-1.rds.amazonaws.com',
-  user: 'skuser',
-  password: '3hkh8eDkQxe7EmzQgqHK',
-  database: 'clients_api_prod',
-  port: 5432,
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: parseInt(process.env.DB_PORT || '5432'),
   ssl: { rejectUnauthorized: false },
   connectionTimeoutMillis: 15000,
 });
