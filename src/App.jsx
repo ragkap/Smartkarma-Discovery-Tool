@@ -1,5 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 
+function useWindowWidth() {
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const fn = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return width;
+}
+
 const skeletonKeyframes = `
   @keyframes shimmer {
     0%   { background-position: -600px 0; }
@@ -43,12 +53,16 @@ const CHART_COLORS = [
   '#bdbdbd', '#26a69a',
 ];
 
-function DonutChart({ data }) {
+function DonutChart({ data, isMobile }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   const TOP_N = 10;
   const top = data.slice(0, TOP_N);
   const othersVal = data.slice(TOP_N).reduce((s, d) => s + d.value, 0);
   const chartData = othersVal > 0 ? [...top, { name: 'Others', value: othersVal }] : top;
+
+  const donutSize = isMobile ? 160 : 260;
+  const innerR = isMobile ? 45 : 75;
+  const outerR = isMobile ? 75 : 125;
 
   const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
     if (percent < 0.04) return null;
@@ -57,24 +71,24 @@ function DonutChart({ data }) {
     const x = cx + r * Math.cos(-midAngle * RADIAN);
     const y = cy + r * Math.sin(-midAngle * RADIAN);
     return (
-      <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={600}>
+      <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={isMobile ? 9 : 11} fontWeight={600}>
         {(percent * 100).toFixed(1)}%
       </text>
     );
   };
 
   return (
-    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 24 }}>
+    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 24 }}>
       {/* Donut — fixed size, no clipping */}
-      <div style={{ flexShrink: 0, width: 260, height: 260 }}>
+      <div style={{ flexShrink: 0, width: donutSize, height: donutSize }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={chartData}
               cx="50%"
               cy="50%"
-              innerRadius={75}
-              outerRadius={125}
+              innerRadius={innerR}
+              outerRadius={outerR}
               dataKey="value"
               labelLine={false}
               label={renderCustomLabel}
@@ -96,7 +110,7 @@ function DonutChart({ data }) {
               width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
               background: CHART_COLORS[i % CHART_COLORS.length],
             }} />
-            <span style={{ fontSize: 12, color: '#444', whiteSpace: 'nowrap' }}>{entry.name}</span>
+            <span style={{ fontSize: isMobile ? 10 : 12, color: '#444', whiteSpace: 'nowrap' }}>{entry.name}</span>
           </div>
         ))}
       </div>
@@ -106,7 +120,7 @@ function DonutChart({ data }) {
 
 function formatMarketCap(val) {
   if (val == null) return '';
-  return '$' + Number(val).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  return '$' + Number(val).toLocaleString('en-US', { maximumFractionDigits: 0 }) + 'm';
 }
 
 function Bar({ value, max, color }) {
@@ -164,6 +178,9 @@ export default function App() {
   const [error, setError] = useState(null);
   const [chartData, setChartData] = useState(null);
 
+  const width = useWindowWidth();
+  const isMobile = width < 640;
+  const isTablet = width < 1024;
   const PER_PAGE = 25;
 
   useEffect(() => {
@@ -220,10 +237,10 @@ export default function App() {
   });
 
   return (
-    <div style={{ maxWidth: 1233, margin: '0 auto', padding: '32px 40px' }}>
+    <div style={{ maxWidth: 1233, margin: '0 auto', padding: isMobile ? '20px 16px' : '32px 40px' }}>
       <style>{skeletonKeyframes}</style>
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: '#0d0d1a', marginBottom: 6, fontFamily: "'Roboto', sans-serif" }}>
+        <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, color: '#0d0d1a', marginBottom: 6, fontFamily: "'Roboto', sans-serif" }}>
           Smartkarma Discovery
         </h1>
         <p style={{ color: '#666', fontSize: 14 }}>
@@ -242,7 +259,7 @@ export default function App() {
           Narrow down Entities by market capitalization, country and sector where users searches have not retrieved recently published Insights
         </p>
 
-        <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 24, flexWrap: 'wrap', alignItems: isMobile ? 'stretch' : 'center' }}>
           <Select label="Country" options={countries} value={country}
             onChange={v => { setCountry(v); setPage(1); }} />
           <Select label="Sector" options={sectors} value={sector}
@@ -250,7 +267,7 @@ export default function App() {
           <div style={{
             display: 'flex', alignItems: 'center',
             border: '1px solid #d0d0d0', borderRadius: 6,
-            background: '#fff', overflow: 'hidden', flex: 1, minWidth: 280,
+            background: '#fff', overflow: 'hidden', flex: 1, minWidth: isMobile ? 'unset' : 280,
           }}>
             <span style={{
               padding: '10px 12px', color: '#1a1a2e', fontSize: 14,
@@ -289,22 +306,23 @@ export default function App() {
           </div>
         )}
 
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isMobile ? 340 : 'unset' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #e8e8e8' }}>
-              <th style={{ width: 36, padding: '10px 4px 10px 0', color: '#aaa', fontWeight: 400, fontSize: 12 }}></th>
+              {!isMobile && <th style={{ width: 36, padding: '10px 4px 10px 0', color: '#aaa', fontWeight: 400, fontSize: 12 }}></th>}
               <th style={thStyle()} onClick={() => handleSort('entity')}>
                 Entity Name <SortIcon col="entity" />
               </th>
-              <th style={{ ...thStyle('right'), width: 130 }} onClick={() => handleSort('market_cap')}>
+              {!isMobile && <th style={{ ...thStyle('right'), width: 130 }} onClick={() => handleSort('market_cap')}>
                 Market Cap <SortIcon col="market_cap" />
-              </th>
+              </th>}
               <th style={{ ...thStyle(), width: 260 }} onClick={() => handleSort('distinct_searches')}>
                 Unique Searches <SortIcon col="distinct_searches" />
               </th>
-              <th style={{ ...thStyle(), width: 260 }} onClick={() => handleSort('total_searches')}>
+              {!isMobile && <th style={{ ...thStyle(), width: 260 }} onClick={() => handleSort('total_searches')}>
                 Total Searches <SortIcon col="total_searches" />
-              </th>
+              </th>}
             </tr>
           </thead>
           <tbody>
@@ -319,9 +337,9 @@ export default function App() {
                 onMouseEnter={e => e.currentTarget.style.background = '#f7f7f7'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <td style={{ padding: '9px 4px 9px 0', color: '#aaa', fontSize: 13, textAlign: 'right' }}>
+                {!isMobile && <td style={{ padding: '9px 4px 9px 0', color: '#aaa', fontSize: 13, textAlign: 'right' }}>
                   {startRow + i}.
-                </td>
+                </td>}
                 <td style={{ padding: '9px 12px' }}>
                   <a
                     href={`https://www.smartkarma.com/entities/${row.slug}`}
@@ -331,20 +349,26 @@ export default function App() {
                   >
                     {row.entity}
                   </a>
+                  {isMobile && row.market_cap && (
+                    <><br /><span style={{ fontSize: 12, color: '#888', fontWeight: 400, textDecoration: 'none' }}>
+                      {formatMarketCap(row.market_cap)}
+                    </span></>
+                  )}
                 </td>
-                <td style={{ padding: '9px 12px', textAlign: 'right', fontSize: 13, color: '#444' }}>
+                {!isMobile && <td style={{ padding: '9px 12px', textAlign: 'right', fontSize: 13, color: '#444' }}>
                   {formatMarketCap(row.market_cap)}
-                </td>
+                </td>}
                 <td style={{ padding: '9px 12px' }}>
                   <Bar value={Number(row.distinct_searches)} max={maxDistinct} color={TEAL} />
                 </td>
-                <td style={{ padding: '9px 12px' }}>
+                {!isMobile && <td style={{ padding: '9px 12px' }}>
                   <Bar value={Number(row.total_searches)} max={maxTotal} color={NAVY} />
-                </td>
+                </td>}
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
 
         {total > 0 && (
           <div style={{
@@ -383,9 +407,9 @@ export default function App() {
           <p style={{ color: '#666', fontSize: 13, marginBottom: 24 }}>
             Determine how search activity on Smartkarma can be categorised by country and sector
           </p>
-          <div style={{ display: 'flex', gap: 32 }}>
-            <DonutChart data={chartData.countries} />
-            <DonutChart data={chartData.sectors} />
+          <div style={{ display: 'flex', flexDirection: isTablet ? 'column' : 'row', gap: 32 }}>
+            <DonutChart data={chartData.countries} isMobile={isMobile} />
+            <DonutChart data={chartData.sectors} isMobile={isMobile} />
           </div>
         </div>
       )}
