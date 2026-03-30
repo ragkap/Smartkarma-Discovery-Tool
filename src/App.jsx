@@ -1,11 +1,73 @@
 import { useState, useEffect, useCallback } from 'react';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const API = '';
 const TEAL = '#1db8a0';
 const NAVY = '#1b3a6b';
 
+const CHART_COLORS = [
+  '#1db8a0', '#1a7a6e', '#9e9e9e', '#1b3a6b', '#90caf9',
+  '#43a047', '#8bc34a', '#cddc39', '#00bcd4', '#1565c0',
+  '#bdbdbd', '#26a69a',
+];
+
+function DonutChart({ data, title }) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  const TOP_N = 10;
+  const top = data.slice(0, TOP_N);
+  const othersVal = data.slice(TOP_N).reduce((s, d) => s + d.value, 0);
+  const chartData = othersVal > 0 ? [...top, { name: 'Others', value: othersVal }] : top;
+
+  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+    if (percent < 0.04) return null;
+    const RADIAN = Math.PI / 180;
+    const r = innerRadius + (outerRadius - innerRadius) * 0.55;
+    const x = cx + r * Math.cos(-midAngle * RADIAN);
+    const y = cy + r * Math.sin(-midAngle * RADIAN);
+    return (
+      <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={600}>
+        {(percent * 100).toFixed(1)}%
+      </text>
+    );
+  };
+
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <ResponsiveContainer width="100%" height={320}>
+        <PieChart>
+          <Pie
+            data={chartData}
+            cx="38%"
+            cy="50%"
+            innerRadius={80}
+            outerRadius={140}
+            dataKey="value"
+            labelLine={false}
+            label={renderCustomLabel}
+          >
+            {chartData.map((_, i) => (
+              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(value) => [`${((value / total) * 100).toFixed(1)}%`, 'Share']}
+          />
+          <Legend
+            layout="vertical"
+            align="right"
+            verticalAlign="middle"
+            iconType="circle"
+            iconSize={10}
+            formatter={(value) => <span style={{ fontSize: 12, color: '#444' }}>{value}</span>}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 function formatMarketCap(val) {
-  if (val == null) return 'null';
+  if (val == null) return '';
   return '$' + Number(val).toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
@@ -62,6 +124,7 @@ export default function App() {
   const [sortDir, setSortDir] = useState('desc');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [chartData, setChartData] = useState(null);
 
   const PER_PAGE = 25;
 
@@ -69,6 +132,10 @@ export default function App() {
     fetch(`${API}/api/filters`)
       .then(r => r.json())
       .then(d => { setCountries(d.countries || []); setSectors(d.sectors || []); })
+      .catch(() => {});
+    fetch(`${API}/api/charts`)
+      .then(r => r.json())
+      .then(d => setChartData(d))
       .catch(() => {});
   }, []);
 
@@ -123,6 +190,9 @@ export default function App() {
         <p style={{ color: '#666', fontSize: 14 }}>
           Using Search data to help identify Entities of interest to users, having the fewest number of Insights published
         </p>
+        <p style={{ color: '#999', fontSize: 13, marginTop: 6 }}>
+          Based on last 3 months of searches on Smartkarma
+        </p>
       </div>
 
       <div>
@@ -133,7 +203,7 @@ export default function App() {
           Narrow down Entities by market capitalization, country and sector where users searches have not retrieved recently published Insights
         </p>
 
-        <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
           <Select label="Country" options={countries} value={country}
             onChange={v => { setCountry(v); setPage(1); }} />
           <Select label="Sector" options={sectors} value={sector}
@@ -160,6 +230,18 @@ export default function App() {
               }}
             />
           </div>
+          {(country || sector || marketCapMin) && (
+            <button
+              onClick={() => { setCountry(''); setSector(''); setMarketCapMin(''); setPage(1); }}
+              style={{
+                padding: '10px 14px', border: '1px solid #d0d0d0', borderRadius: 6,
+                background: '#fff', cursor: 'pointer', fontSize: 13, color: '#666',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              ✕ Clear filters
+            </button>
+          )}
         </div>
 
         {error && (
@@ -252,6 +334,22 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {/* Charts */}
+      {chartData && (
+        <div style={{ marginTop: 48, borderTop: '1px solid #eee', paddingTop: 32 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0d0d1a', marginBottom: 4, fontFamily: 'inherit' }}>
+            Searched Countries and Sectors
+          </h2>
+          <p style={{ color: '#666', fontSize: 13, marginBottom: 24 }}>
+            Determine how search activity on Smartkarma can be categorised by country and sector
+          </p>
+          <div style={{ display: 'flex', gap: 32 }}>
+            <DonutChart data={chartData.countries} />
+            <DonutChart data={chartData.sectors} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
