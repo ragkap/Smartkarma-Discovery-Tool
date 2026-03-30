@@ -1,5 +1,37 @@
 import { useState, useEffect, useCallback } from 'react';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+const skeletonKeyframes = `
+  @keyframes shimmer {
+    0%   { background-position: -600px 0; }
+    100% { background-position: 600px 0; }
+  }
+`;
+
+function SkeletonCell({ width = '80%', height = 13 }) {
+  return (
+    <div style={{
+      width, height, borderRadius: 4,
+      background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+      backgroundSize: '600px 100%',
+      animation: 'shimmer 1.4s infinite linear',
+    }} />
+  );
+}
+
+function SkeletonRows({ count = 25 }) {
+  return Array.from({ length: count }).map((_, i) => (
+    <tr key={i} style={{ borderBottom: '1px solid #f0f0f0' }}>
+      <td style={{ padding: '11px 4px 11px 0', textAlign: 'right' }}>
+        <SkeletonCell width={18} height={12} />
+      </td>
+      <td style={{ padding: '11px 12px' }}><SkeletonCell width={`${60 + Math.random() * 25}%`} /></td>
+      <td style={{ padding: '11px 12px', textAlign: 'right' }}><SkeletonCell width={60} /></td>
+      <td style={{ padding: '11px 12px' }}><SkeletonCell width={`${30 + Math.random() * 50}%`} height={14} /></td>
+      <td style={{ padding: '11px 12px' }}><SkeletonCell width={`${20 + Math.random() * 60}%`} height={14} /></td>
+    </tr>
+  ));
+}
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 const API = '';
 const TEAL = '#1db8a0';
@@ -11,7 +43,7 @@ const CHART_COLORS = [
   '#bdbdbd', '#26a69a',
 ];
 
-function DonutChart({ data, title }) {
+function DonutChart({ data }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   const TOP_N = 10;
   const top = data.slice(0, TOP_N);
@@ -32,36 +64,42 @@ function DonutChart({ data, title }) {
   };
 
   return (
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <ResponsiveContainer width="100%" height={320}>
-        <PieChart>
-          <Pie
-            data={chartData}
-            cx="38%"
-            cy="50%"
-            innerRadius={80}
-            outerRadius={140}
-            dataKey="value"
-            labelLine={false}
-            label={renderCustomLabel}
-          >
-            {chartData.map((_, i) => (
-              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(value) => [`${((value / total) * 100).toFixed(1)}%`, 'Share']}
-          />
-          <Legend
-            layout="vertical"
-            align="right"
-            verticalAlign="middle"
-            iconType="circle"
-            iconSize={10}
-            formatter={(value) => <span style={{ fontSize: 12, color: '#444' }}>{value}</span>}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 24 }}>
+      {/* Donut — fixed size, no clipping */}
+      <div style={{ flexShrink: 0, width: 260, height: 260 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              innerRadius={75}
+              outerRadius={125}
+              dataKey="value"
+              labelLine={false}
+              label={renderCustomLabel}
+              isAnimationActive={false}
+            >
+              {chartData.map((_, i) => (
+                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip formatter={(value) => [`${((value / total) * 100).toFixed(1)}%`, 'Share']} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      {/* HTML legend — never clipped */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {chartData.map((entry, i) => (
+          <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{
+              width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+              background: CHART_COLORS[i % CHART_COLORS.length],
+            }} />
+            <span style={{ fontSize: 12, color: '#444', whiteSpace: 'nowrap' }}>{entry.name}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -182,7 +220,8 @@ export default function App() {
   });
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 40px' }}>
+    <div style={{ maxWidth: 1135, margin: '0 auto', padding: '32px 40px' }}>
+      <style>{skeletonKeyframes}</style>
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: '#0d0d1a', marginBottom: 6, fontFamily: 'inherit' }}>
           Smartkarma Discovery
@@ -270,7 +309,7 @@ export default function App() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} style={{ padding: 48, textAlign: 'center', color: '#888' }}>Loading…</td></tr>
+              <SkeletonRows count={25} />
             ) : rows.length === 0 && !error ? (
               <tr><td colSpan={5} style={{ padding: 48, textAlign: 'center', color: '#888' }}>No results found.</td></tr>
             ) : rows.map((row, i) => (
