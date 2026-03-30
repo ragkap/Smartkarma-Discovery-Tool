@@ -220,10 +220,10 @@ export default function App() {
   });
 
   return (
-    <div style={{ maxWidth: 1135, margin: '0 auto', padding: '32px 40px' }}>
+    <div style={{ maxWidth: 1233, margin: '0 auto', padding: '32px 40px' }}>
       <style>{skeletonKeyframes}</style>
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: '#0d0d1a', marginBottom: 6, fontFamily: 'inherit' }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: '#0d0d1a', marginBottom: 6, fontFamily: "'Roboto', sans-serif" }}>
           Smartkarma Discovery
         </h1>
         <p style={{ color: '#666', fontSize: 14 }}>
@@ -235,7 +235,7 @@ export default function App() {
       </div>
 
       <div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0d0d1a', marginBottom: 4, fontFamily: 'inherit' }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0d0d1a', marginBottom: 4, fontFamily: "'Roboto', sans-serif" }}>
           Most Searched Entities
         </h2>
         <p style={{ color: '#666', fontSize: 13, marginBottom: 20 }}>
@@ -377,7 +377,7 @@ export default function App() {
       {/* Charts */}
       {chartData && (
         <div style={{ marginTop: 48, borderTop: '1px solid #eee', paddingTop: 32 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0d0d1a', marginBottom: 4, fontFamily: 'inherit' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0d0d1a', marginBottom: 4, fontFamily: "'Roboto', sans-serif" }}>
             Searched Countries and Sectors
           </h2>
           <p style={{ color: '#666', fontSize: 13, marginBottom: 24 }}>
